@@ -28,7 +28,7 @@ const pageTitles: Record<AppRoute, string> = {
 };
 
 export function App() {
-  const [route, setRoute] = useState<AppRoute>("landing");
+  const [route, setRoute] = useState<AppRoute>("sea-map");
   const title = useMemo(() => pageTitles[route], [route]);
 
   return (

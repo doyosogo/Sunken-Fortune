@@ -4,16 +4,17 @@ import type { AppRoute } from "../App";
 interface NavigationItem {
   route: AppRoute;
   label: string;
+  icon: string;
 }
 
 const navigationItems: NavigationItem[] = [
-  { route: "landing", label: "Landing" },
-  { route: "dashboard", label: "Dashboard" },
-  { route: "sea-map", label: "Sea Map" },
-  { route: "shipyard", label: "Shipyard" },
-  { route: "shop", label: "Shop" },
-  { route: "captain-cabin", label: "Captain Cabin" },
-  { route: "settings", label: "Settings" }
+  { route: "sea-map", label: "Sea", icon: "S" },
+  { route: "dashboard", label: "Deck", icon: "D" },
+  { route: "shipyard", label: "Yard", icon: "Y" },
+  { route: "shop", label: "Market", icon: "M" },
+  { route: "captain-cabin", label: "Cabin", icon: "C" },
+  { route: "settings", label: "Options", icon: "O" },
+  { route: "landing", label: "Login", icon: "L" }
 ];
 
 interface AppShellProps {
@@ -35,7 +36,7 @@ export function AppShell({
           <span className="brand-mark">SF</span>
           <div>
             <strong>Sunken Fortune</strong>
-            <span>Pirate Naval RPG</span>
+            <span>Emerald Coast</span>
           </div>
         </div>
 
@@ -47,6 +48,7 @@ export function AppShell({
               onClick={() => onNavigate(item.route)}
               type="button"
             >
+              <span className="nav-icon" aria-hidden="true">{item.icon}</span>
               {item.label}
             </button>
           ))}
@@ -56,14 +58,8 @@ export function AppShell({
       <div className="app-main">
         <header className="topbar">
           <div>
-            <span className="eyebrow">Development Scaffold</span>
+            <span className="eyebrow">Open Sea Command</span>
             <h1>{title}</h1>
-          </div>
-          <div className="save-cluster">
-            <button className="save-button" type="button">
-              Save Now
-            </button>
-            <span className="save-status">Saved just now</span>
           </div>
         </header>
 
