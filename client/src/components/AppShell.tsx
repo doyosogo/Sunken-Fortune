@@ -44,6 +44,7 @@ export function AppShell({
           {navigationItems.map((item) => (
             <button
               className={item.route === currentRoute ? "nav-item active" : "nav-item"}
+              aria-current={item.route === currentRoute ? "page" : undefined}
               key={item.route}
               onClick={() => onNavigate(item.route)}
               type="button"

@@ -1,12 +1,15 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { AppShell } from "./components/AppShell";
 import { CaptainCabinPage } from "./pages/CaptainCabinPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LandingPage } from "./pages/LandingPage";
-import { SeaMapPage } from "./pages/SeaMapPage";
 import { SettingsPage } from "./pages/SettingsPage";
 import { ShipyardPage } from "./pages/ShipyardPage";
 import { ShopPage } from "./pages/ShopPage";
+
+const SeaMapPage = lazy(() =>
+  import("./pages/SeaMapPage").then((module) => ({ default: module.SeaMapPage }))
+);
 
 export type AppRoute =
   | "landing"
@@ -35,11 +38,25 @@ export function App() {
     <AppShell currentRoute={route} title={title} onNavigate={setRoute}>
       {route === "landing" && <LandingPage />}
       {route === "dashboard" && <DashboardPage />}
-      {route === "sea-map" && <SeaMapPage />}
+      {route === "sea-map" && (
+        <Suspense fallback={<SeaMapLoading />}>
+          <SeaMapPage />
+        </Suspense>
+      )}
       {route === "shipyard" && <ShipyardPage />}
       {route === "shop" && <ShopPage />}
       {route === "captain-cabin" && <CaptainCabinPage />}
       {route === "settings" && <SettingsPage />}
     </AppShell>
+  );
+}
+
+function SeaMapLoading() {
+  return (
+    <section className="route-loading" aria-live="polite">
+      <div className="loading-compass" aria-hidden="true" />
+      <strong>Charting the waters...</strong>
+      <span>Preparing the Emerald Coast sea map</span>
+    </section>
   );
 }

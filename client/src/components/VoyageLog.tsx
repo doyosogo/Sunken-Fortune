@@ -9,7 +9,14 @@ const logItems = [
 
 export function VoyageLog() {
   return (
-    <GamePanel title="Voyage Log">
+    <GamePanel
+      action={
+        <button className="panel-button" type="button">
+          View All
+        </button>
+      }
+      title="Voyage Log"
+    >
       <ol className="voyage-log">
         {logItems.map((item) => (
           <li key={item}>{item}</li>
