@@ -1,0 +1,24 @@
+{
+  "name": "sunken-fortune",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Sunken Fortune monorepo for a PvE-first pirate naval action RPG.",
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
+  "scripts": {
+    "dev:client": "npm run dev -w client",
+    "dev:server": "npm run start:dev -w server",
+    "build": "npm run build -w shared && npm run build -w client && npm run build -w server",
+    "build:client": "npm run build -w client",
+    "build:server": "npm run build -w server",
+    "build:shared": "npm run build -w shared",
+    "typecheck": "npm run typecheck -w shared && npm run typecheck -w client && npm run typecheck -w server"
+  },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  }
+}
