@@ -25,7 +25,9 @@ export function SeaMapPage() {
     speed: 0,
     worldWidth: SEA_WORLD.width,
     worldHeight: SEA_WORLD.height,
-    regionName: SEA_WORLD.regionName
+    regionName: SEA_WORLD.regionName,
+    waterType: "Open Sea",
+    nearbyLocationName: null
   });
 
   useEffect(() => {

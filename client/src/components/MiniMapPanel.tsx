@@ -6,8 +6,8 @@ interface MiniMapPanelProps {
 }
 
 export function MiniMapPanel({ playerPosition }: MiniMapPanelProps) {
-  const playerLeft = `${(playerPosition.x / playerPosition.worldWidth) * 100}%`;
-  const playerTop = `${(playerPosition.y / playerPosition.worldHeight) * 100}%`;
+  const playerLeft = `${clampPercent((playerPosition.x / playerPosition.worldWidth) * 100)}%`;
+  const playerTop = `${clampPercent((playerPosition.y / playerPosition.worldHeight) * 100)}%`;
 
   return (
     <GamePanel title={playerPosition.regionName}>
@@ -30,6 +30,28 @@ export function MiniMapPanel({ playerPosition }: MiniMapPanelProps) {
         <span><i className="legend-enemy" /> Threat</span>
         <span><i className="legend-locked" /> Future Region</span>
       </div>
+      <div className="navigation-readout">
+        <div>
+          <span>Water</span>
+          <strong>{playerPosition.waterType}</strong>
+        </div>
+        <div>
+          <span>Nearby</span>
+          <strong>{playerPosition.nearbyLocationName ?? "None"}</strong>
+        </div>
+        <div>
+          <span>Speed</span>
+          <strong>{Math.round(playerPosition.speed)}</strong>
+        </div>
+        <div>
+          <span>Heading</span>
+          <strong>{Math.round(playerPosition.heading)} deg</strong>
+        </div>
+      </div>
     </GamePanel>
   );
+}
+
+function clampPercent(value: number) {
+  return Math.min(96, Math.max(4, value));
 }

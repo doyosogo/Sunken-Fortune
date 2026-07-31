@@ -1,10 +1,23 @@
 import Phaser from "phaser";
 import { PlayerShipController } from "../PlayerShipController";
-import { SEA_MAP_PLAYER_EVENT, SEA_WORLD, type SeaMapPositionUpdate } from "../worldConfig";
+import { SEA_MAP_PLAYER_EVENT, SEA_WORLD, SHIP_MOVEMENT, type SeaMapPositionUpdate, type WaterType } from "../worldConfig";
+import {
+  ENEMY_SHIPS,
+  ISLANDS,
+  PORTS,
+  SEA_MONSTERS,
+  SHALLOW_WATER_ZONES,
+  type EnemyShipDefinition,
+  type IslandDefinition,
+  type PortDefinition,
+  type SeaMonsterDefinition,
+  type WorldPosition
+} from "../worldObjects";
 
 type NearbyObjectType = "port" | "island" | "enemy" | "monster";
 
 interface NearbyObject {
+  id: string;
   x: number;
   y: number;
   radius: number;
@@ -12,6 +25,8 @@ interface NearbyObject {
   type: NearbyObjectType;
 }
 
+const DEBUG_OVERLAY_ENABLED = true;
+const PLAYER_COLLISION_RADIUS = 44;
 const INTERACTION_HINTS: Record<NearbyObjectType, string> = {
   port: "Press E to Dock",
   island: "Island Nearby",
@@ -19,15 +34,18 @@ const INTERACTION_HINTS: Record<NearbyObjectType, string> = {
   monster: "Sea Monster Nearby"
 };
 
-const DEBUG_OVERLAY_ENABLED = true;
-
 export class SeaMapScene extends Phaser.Scene {
   private player?: PlayerShipController;
   private playerLabel?: Phaser.GameObjects.Text;
   private debugText?: Phaser.GameObjects.Text;
   private interactionHint?: Phaser.GameObjects.Text;
+  private statusText?: Phaser.GameObjects.Text;
   private nearbyObjects: NearbyObject[] = [];
   private minimapEventTimer = 0;
+  private currentWaterType: WaterType = "Open Sea";
+  private currentNearbyLocationName: string | null = null;
+  private statusMessageUntil = 0;
+  private lastDockMessageAt = -SHIP_MOVEMENT.interactionMessageCooldownMs;
 
   constructor() {
     super("SeaMapScene");
@@ -38,6 +56,7 @@ export class SeaMapScene extends Phaser.Scene {
     this.physics.world.setBounds(0, 0, SEA_WORLD.width, SEA_WORLD.height);
 
     this.createOcean();
+    this.createShallowWaterZones();
     this.drawRoute([
       { x: 420, y: 2860 },
       { x: 820, y: 2440 },
@@ -47,23 +66,10 @@ export class SeaMapScene extends Phaser.Scene {
       { x: 3840, y: 880 }
     ]);
 
-    this.createIsland(720, 760, "Driftwood Cay", 230);
-    this.createIsland(1620, 1380, "Saltglass Reef", 250);
-    this.createIsland(2500, 520, "Old Lantern Isle", 235);
-    this.createIsland(3340, 2100, "Coralhook Atoll", 245);
-    this.createIsland(4480, 2960, "Mistbarrel Key", 230);
-
-    this.createPort(520, 2920, "Tidefall Port");
-    this.createPort(3040, 2760, "Amberwake Harbor");
-
-    this.createNpcShip(1320, 2040, 0xdc2626, 0x450a0a, "Raider Cutter");
-    this.createNpcShip(2380, 1180, 0xdc2626, 0x450a0a, "Rogue Sloop");
-    this.createNpcShip(3920, 1460, 0xb91c1c, 0x450a0a, "Blackwake Brig");
-    this.createNpcShip(4480, 2480, 0xdc2626, 0x450a0a, "Ashwake Raider");
-
-    this.createSeaMonster(1880, 620, "Reef Horror");
-    this.createSeaMonster(3560, 3180, "Deepcoil");
-    this.createSeaMonster(4680, 1040, "Crownmaw");
+    ISLANDS.forEach((island) => this.createIsland(island));
+    PORTS.forEach((port) => this.createPort(port));
+    ENEMY_SHIPS.forEach((ship) => this.createNpcShip(ship));
+    SEA_MONSTERS.forEach((monster) => this.createSeaMonster(monster));
 
     this.player = new PlayerShipController(this, 420, 2860);
     this.playerLabel = this.addLabel(this.player.container.x, this.player.container.y - 72, "Dawn Skiff", "#fef3c7");
@@ -73,21 +79,26 @@ export class SeaMapScene extends Phaser.Scene {
 
     this.cameras.main.startFollow(this.player.container, false, 0.08, 0.08);
     this.cameras.main.setDeadzone(120, 90);
+
     if (DEBUG_OVERLAY_ENABLED) {
       this.createDebugOverlay();
     }
+
     this.createInteractionHint();
+    this.createStatusText();
     this.publishPlayerPosition();
   }
 
-  update(_time: number, delta: number) {
+  update(time: number, delta: number) {
     if (!this.player) {
       return;
     }
 
+    this.updateWaterState(time);
     this.player.update(delta);
+    this.resolveIslandCollision();
     this.updatePlayerLabel();
-    this.updateInteractionHint();
+    this.updateInteractionHint(time);
     this.updateDebugOverlay();
     this.updateMinimapEvent(delta);
   }
@@ -112,48 +123,90 @@ export class SeaMapScene extends Phaser.Scene {
     }
   }
 
-  private createIsland(x: number, y: number, label: string, radius: number) {
+  private createShallowWaterZones() {
+    SHALLOW_WATER_ZONES.forEach((zone) => {
+      this.add.circle(zone.position.x, zone.position.y, zone.radius, 0x7dd3fc, 0.08).setStrokeStyle(3, 0x9beafe, 0.18);
+      this.add.circle(zone.position.x, zone.position.y, zone.radius * 0.72, 0xfde68a, 0.045);
+    });
+  }
+
+  private createIsland(island: IslandDefinition) {
+    const { x, y } = island.position;
+    const radius = island.renderRadius;
     this.add.ellipse(x, y, radius, radius * 0.56, 0x9a7638);
     this.add.ellipse(x + 30, y - 24, radius * 0.52, radius * 0.32, 0x2f7d4f);
     this.add.circle(x - 52, y + 12, 22, 0x6b4f2a);
     this.add.circle(x + 74, y + 22, 18, 0x6b4f2a);
-    this.addLabel(x, y - radius * 0.42, label, "#fef3c7");
-    this.nearbyObjects.push({ x, y, radius: radius * 0.56 + 110, label, type: "island" });
+    this.add.circle(x, y, island.collisionRadius, 0x3f2a18, 0.12).setStrokeStyle(2, 0xfde68a, 0.18);
+    this.addLabel(x, y - radius * 0.42, island.displayName, "#fef3c7");
+    this.nearbyObjects.push({
+      id: island.id,
+      x,
+      y,
+      radius: island.interactionRadius,
+      label: island.displayName,
+      type: "island"
+    });
   }
 
-  private createPort(x: number, y: number, label: string) {
+  private createPort(port: PortDefinition) {
+    const { x, y } = port.position;
+    this.add.circle(x, y, port.harbourRadius, 0xf8c14a, 0.055).setStrokeStyle(4, 0xf8c14a, 0.32);
     this.add.rectangle(x, y, 130, 78, 0x6b3f1f).setStrokeStyle(4, 0xd9a441);
     this.add.rectangle(x, y - 52, 94, 24, 0xd9a441);
     this.add.rectangle(x + 84, y + 4, 88, 18, 0x5b341c).setStrokeStyle(2, 0x2b1a11);
     this.add.circle(x + 76, y - 58, 13, 0xfacc15, 0.9);
-    this.addLabel(x, y - 96, label, "#fde68a");
-    this.nearbyObjects.push({ x, y, radius: 190, label, type: "port" });
+    this.addLabel(x, y - 96, port.displayName, "#fde68a");
+    this.nearbyObjects.push({
+      id: port.id,
+      x,
+      y,
+      radius: port.interactionRadius,
+      label: port.displayName,
+      type: "port"
+    });
   }
 
-  private createNpcShip(x: number, y: number, color: number, stroke: number, label: string) {
+  private createNpcShip(definition: EnemyShipDefinition) {
+    const { x, y } = definition.position;
     const ship = this.add.container(x, y);
-    ship.setRotation(Phaser.Math.DegToRad((x + y) % 360));
-    const hull = this.add.polygon(0, 0, [38, 0, 16, -15, -34, -12, -42, 0, -34, 12, 16, 15], color);
-    hull.setStrokeStyle(4, stroke);
+    ship.setRotation(Phaser.Math.DegToRad(definition.rotationDegrees));
+    const hull = this.add.polygon(0, 0, [38, 0, 16, -15, -34, -12, -42, 0, -34, 12, 16, 15], 0xdc2626);
+    hull.setStrokeStyle(4, 0x450a0a);
     const mast = this.add.rectangle(0, 0, 5, 34, 0x5b341c);
     const sail = this.add.triangle(8, -8, 0, -22, 0, 20, 25, 10, 0xf8fafc);
     sail.setStrokeStyle(2, 0x7a4b29);
     ship.add([hull, mast, sail]);
-    this.addLabel(x, y - 58, label, "#fecaca");
-    this.nearbyObjects.push({ x, y, radius: 210, label, type: "enemy" });
+    this.addLabel(x, y - 58, definition.displayName, "#fecaca");
+    this.nearbyObjects.push({
+      id: definition.id,
+      x,
+      y,
+      radius: definition.interactionRadius,
+      label: definition.displayName,
+      type: "enemy"
+    });
   }
 
-  private createSeaMonster(x: number, y: number, label: string) {
+  private createSeaMonster(monster: SeaMonsterDefinition) {
+    const { x, y } = monster.position;
     this.add.circle(x, y, 44, 0x7c3aed).setStrokeStyle(4, 0x2e1065);
     this.add.circle(x - 36, y + 18, 18, 0x6d28d9);
     this.add.circle(x + 38, y + 15, 18, 0x6d28d9);
     this.add.circle(x - 12, y - 10, 5, 0xfef3c7);
     this.add.circle(x + 12, y - 10, 5, 0xfef3c7);
-    this.addLabel(x, y - 70, label, "#ddd6fe");
-    this.nearbyObjects.push({ x, y, radius: 225, label, type: "monster" });
+    this.addLabel(x, y - 70, monster.displayName, "#ddd6fe");
+    this.nearbyObjects.push({
+      id: monster.id,
+      x,
+      y,
+      radius: monster.interactionRadius,
+      label: monster.displayName,
+      type: "monster"
+    });
   }
 
-  private drawRoute(points: Array<{ x: number; y: number }>) {
+  private drawRoute(points: WorldPosition[]) {
     for (let index = 0; index < points.length - 1; index += 1) {
       const start = points[index];
       const end = points[index + 1];
@@ -171,6 +224,53 @@ export class SeaMapScene extends Phaser.Scene {
         );
       }
     }
+  }
+
+  private updateWaterState(time: number) {
+    if (!this.player) {
+      return;
+    }
+
+    const isShallow = this.isPlayerInsideAnyShallowWaterZone();
+    const nextWaterType: WaterType = isShallow ? "Shallow Waters" : "Open Sea";
+
+    if (nextWaterType !== this.currentWaterType && nextWaterType === "Shallow Waters") {
+      this.showStatusMessage("Shallow Waters", time, 1300);
+    }
+
+    this.currentWaterType = nextWaterType;
+    this.player.setMovementModifiers(
+      isShallow ? SHIP_MOVEMENT.shallowWaterSpeedMultiplier : 1,
+      isShallow ? SHIP_MOVEMENT.shallowWaterAccelerationMultiplier : 1
+    );
+  }
+
+  private isPlayerInsideAnyShallowWaterZone() {
+    if (!this.player) {
+      return false;
+    }
+
+    return SHALLOW_WATER_ZONES.some((zone) =>
+      this.isWithinRadius(this.player!.container.x, this.player!.container.y, zone.position.x, zone.position.y, zone.radius)
+    );
+  }
+
+  private resolveIslandCollision() {
+    if (!this.player) {
+      return;
+    }
+
+    ISLANDS.forEach((island) => {
+      this.player!.pushFromCircle(
+        island.position.x,
+        island.position.y,
+        island.collisionRadius + PLAYER_COLLISION_RADIUS
+      );
+    });
+
+    PORTS.forEach((port) => {
+      this.player!.pushFromCircle(port.position.x, port.position.y, port.collisionRadius + PLAYER_COLLISION_RADIUS);
+    });
   }
 
   private addLabel(x: number, y: number, text: string, color: string) {
@@ -219,21 +319,76 @@ export class SeaMapScene extends Phaser.Scene {
     this.interactionHint.setVisible(false);
   }
 
-  private updateInteractionHint() {
+  private createStatusText() {
+    this.statusText = this.add.text(0, 0, "", {
+      backgroundColor: "rgba(7, 13, 20, 0.82)",
+      color: "#9df6b1",
+      fontFamily: "monospace",
+      fontSize: "16px",
+      padding: { x: 10, y: 6 }
+    });
+    this.statusText.setOrigin(0.5);
+    this.statusText.setDepth(101);
+    this.statusText.setVisible(false);
+  }
+
+  private updateInteractionHint(time: number) {
     if (!this.player || !this.interactionHint) {
       return;
     }
 
     const nearest = this.findNearestObject();
+    this.currentNearbyLocationName =
+      nearest && (nearest.type === "island" || nearest.type === "port") ? nearest.label : null;
 
     if (!nearest) {
       this.interactionHint.setVisible(false);
+      this.updateStatusTextPosition(time);
       return;
     }
 
     this.interactionHint.setText(INTERACTION_HINTS[nearest.type]);
     this.interactionHint.setPosition(this.player.container.x, this.player.container.y - 116);
     this.interactionHint.setVisible(true);
+
+    if (nearest.type === "port" && this.player.wasDockKeyPressed()) {
+      this.showDockUnavailableMessage(time);
+    }
+
+    this.updateStatusTextPosition(time);
+  }
+
+  private showDockUnavailableMessage(time: number) {
+    if (time - this.lastDockMessageAt < SHIP_MOVEMENT.interactionMessageCooldownMs) {
+      return;
+    }
+
+    this.lastDockMessageAt = time;
+    this.showStatusMessage("Docking system not yet available", time, 1600);
+  }
+
+  private showStatusMessage(message: string, time: number, duration: number) {
+    if (!this.statusText || !this.player) {
+      return;
+    }
+
+    this.statusText.setText(message);
+    this.statusText.setPosition(this.player.container.x, this.player.container.y - 150);
+    this.statusText.setVisible(true);
+    this.statusMessageUntil = time + duration;
+  }
+
+  private updateStatusTextPosition(time: number) {
+    if (!this.statusText || !this.player) {
+      return;
+    }
+
+    if (time > this.statusMessageUntil) {
+      this.statusText.setVisible(false);
+      return;
+    }
+
+    this.statusText.setPosition(this.player.container.x, this.player.container.y - 150);
   }
 
   private findNearestObject() {
@@ -245,7 +400,7 @@ export class SeaMapScene extends Phaser.Scene {
     let nearestDistance = Number.POSITIVE_INFINITY;
 
     for (const object of this.nearbyObjects) {
-      const distance = Phaser.Math.Distance.Between(this.player.container.x, this.player.container.y, object.x, object.y);
+      const distance = this.getDistanceToPlayer(object.x, object.y);
 
       if (distance <= object.radius && distance < nearestDistance) {
         nearest = object;
@@ -269,6 +424,8 @@ export class SeaMapScene extends Phaser.Scene {
       `Player X: ${Math.round(this.player.container.x)}`,
       `Player Y: ${Math.round(this.player.container.y)}`,
       `Current Region: ${SEA_WORLD.regionName}`,
+      `Water: ${this.currentWaterType}`,
+      `Nearby: ${this.currentNearbyLocationName ?? "None"}`,
       `Speed: ${Math.round(this.player.speed)}`,
       `Heading: ${Math.round(heading)} deg`
     ]);
@@ -297,9 +454,23 @@ export class SeaMapScene extends Phaser.Scene {
       speed: this.player.speed,
       worldWidth: SEA_WORLD.width,
       worldHeight: SEA_WORLD.height,
-      regionName: SEA_WORLD.regionName
+      regionName: SEA_WORLD.regionName,
+      waterType: this.currentWaterType,
+      nearbyLocationName: this.currentNearbyLocationName
     };
 
     window.dispatchEvent(new CustomEvent<SeaMapPositionUpdate>(SEA_MAP_PLAYER_EVENT, { detail }));
+  }
+
+  private getDistanceToPlayer(x: number, y: number) {
+    if (!this.player) {
+      return Number.POSITIVE_INFINITY;
+    }
+
+    return Phaser.Math.Distance.Between(this.player.container.x, this.player.container.y, x, y);
+  }
+
+  private isWithinRadius(x: number, y: number, targetX: number, targetY: number, radius: number) {
+    return Phaser.Math.Distance.Between(x, y, targetX, targetY) <= radius;
   }
 }

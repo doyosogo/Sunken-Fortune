@@ -6,6 +6,7 @@ interface MovementKeys {
   A: Phaser.Input.Keyboard.Key;
   S: Phaser.Input.Keyboard.Key;
   D: Phaser.Input.Keyboard.Key;
+  E: Phaser.Input.Keyboard.Key;
 }
 
 export class PlayerShipController {
@@ -13,11 +14,13 @@ export class PlayerShipController {
 
   private readonly keys: MovementKeys;
   private velocity = new Phaser.Math.Vector2(0, 0);
+  private speedMultiplier = 1;
+  private accelerationMultiplier = 1;
 
   constructor(private readonly scene: Phaser.Scene, x: number, y: number) {
     this.container = scene.add.container(x, y);
     this.container.setDepth(20);
-    this.keys = scene.input.keyboard!.addKeys("W,A,S,D") as MovementKeys;
+    this.keys = scene.input.keyboard!.addKeys("W,A,S,D,E") as MovementKeys;
     this.buildShipGraphic();
   }
 
@@ -34,6 +37,39 @@ export class PlayerShipController {
 
   get headingDegrees() {
     return Phaser.Math.RadToDeg(this.container.rotation);
+  }
+
+  setMovementModifiers(speedMultiplier: number, accelerationMultiplier: number) {
+    this.speedMultiplier = speedMultiplier;
+    this.accelerationMultiplier = accelerationMultiplier;
+  }
+
+  pushFromCircle(centerX: number, centerY: number, radius: number) {
+    const offset = new Phaser.Math.Vector2(this.container.x - centerX, this.container.y - centerY);
+    const distance = Math.max(offset.length(), 0.001);
+
+    if (distance >= radius) {
+      return false;
+    }
+
+    const pushDirection = offset.scale(1 / distance);
+    const penetration = radius - distance;
+    this.container.x += pushDirection.x * penetration * SHIP_MOVEMENT.collisionResponseStrength;
+    this.container.y += pushDirection.y * penetration * SHIP_MOVEMENT.collisionResponseStrength;
+
+    const inwardVelocity = this.velocity.dot(pushDirection);
+
+    if (inwardVelocity < 0) {
+      this.velocity.subtract(pushDirection.scale(inwardVelocity));
+    }
+
+    this.velocity.scale(SHIP_MOVEMENT.collisionVelocityDamping);
+    this.clampToWorld();
+    return true;
+  }
+
+  wasDockKeyPressed() {
+    return Phaser.Input.Keyboard.JustDown(this.keys.E);
   }
 
   private buildShipGraphic() {
@@ -73,11 +109,15 @@ export class PlayerShipController {
     const direction = new Phaser.Math.Vector2(Math.cos(this.container.rotation), Math.sin(this.container.rotation));
 
     if (this.keys.W.isDown) {
-      this.velocity.add(direction.clone().scale(SHIP_MOVEMENT.forwardAcceleration * deltaSeconds));
+      this.velocity.add(
+        direction.clone().scale(SHIP_MOVEMENT.forwardAcceleration * this.accelerationMultiplier * deltaSeconds)
+      );
     }
 
     if (this.keys.S.isDown) {
-      this.velocity.subtract(direction.clone().scale(SHIP_MOVEMENT.reverseAcceleration * deltaSeconds));
+      this.velocity.subtract(
+        direction.clone().scale(SHIP_MOVEMENT.reverseAcceleration * this.accelerationMultiplier * deltaSeconds)
+      );
     }
 
     if (!this.keys.W.isDown && !this.keys.S.isDown) {
@@ -85,7 +125,8 @@ export class PlayerShipController {
     }
 
     const forwardSpeed = this.velocity.dot(new Phaser.Math.Vector2(Math.cos(this.container.rotation), Math.sin(this.container.rotation)));
-    const maxSpeed = forwardSpeed >= 0 ? SHIP_MOVEMENT.maxForwardSpeed : SHIP_MOVEMENT.maxReverseSpeed;
+    const maxSpeed =
+      (forwardSpeed >= 0 ? SHIP_MOVEMENT.maxForwardSpeed : SHIP_MOVEMENT.maxReverseSpeed) * this.speedMultiplier;
 
     if (this.velocity.length() > maxSpeed) {
       this.velocity.setLength(maxSpeed);
@@ -107,6 +148,10 @@ export class PlayerShipController {
     this.container.x += this.velocity.x * deltaSeconds;
     this.container.y += this.velocity.y * deltaSeconds;
 
+    this.clampToWorld();
+  }
+
+  private clampToWorld() {
     const min = SHIP_MOVEMENT.boundsPadding;
     const maxX = SEA_WORLD.width - SHIP_MOVEMENT.boundsPadding;
     const maxY = SEA_WORLD.height - SHIP_MOVEMENT.boundsPadding;
