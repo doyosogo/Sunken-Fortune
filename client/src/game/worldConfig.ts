@@ -34,7 +34,15 @@ export const SHIP_MOVEMENT = {
   // Default harbour approach distance for future docking.
   portInteractionDistance: 190,
   // Cooldown for placeholder E-key responses.
-  interactionMessageCooldownMs: 1400
+  interactionMessageCooldownMs: 1400,
+  // Distance from click destination where the ship begins its final stop.
+  arrivalRadius: 36,
+  // Distance from destination where speed starts tapering down.
+  arrivalSlowRadius: 260,
+  // Minimum angle alignment before full acceleration is applied.
+  headingAccelerationDot: 0.35,
+  // Approximate camera zoom for command-view navigation.
+  cameraZoom: 0.55
 } as const;
 
 export const WEAPON_CONFIG = {
@@ -61,7 +69,11 @@ export const WEAPON_CONFIG = {
   // Short smoke puff duration after object impacts.
   smokePuffDurationMs: 360,
   // Short splash duration when cannonballs expire over water.
-  waterSplashDurationMs: 300
+  waterSplashDurationMs: 300,
+  // Broadside firing arc on either side of the ship, in degrees.
+  broadsideArcDegrees: 72,
+  // Maximum current placeholder target firing distance.
+  targetFireRange: 760
 } as const;
 
 export type WaterType = "Open Sea" | "Shallow Waters";
@@ -76,6 +88,23 @@ export interface SeaMapPositionUpdate {
   regionName: string;
   waterType: WaterType;
   nearbyLocationName: string | null;
+  selectedTargetId: string | null;
+  targetSnapshot: {
+    id: string;
+    displayName: string;
+    objectType: "enemy" | "monster";
+    x: number;
+    y: number;
+    distance: number;
+    healthLabel: string;
+    status: string;
+  } | null;
+  hostileMarkers: Array<{
+    id: string;
+    x: number;
+    y: number;
+    objectType: "enemy" | "monster";
+  }>;
 }
 
 export interface WeaponStateUpdate {

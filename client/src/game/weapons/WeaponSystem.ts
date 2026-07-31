@@ -10,15 +10,13 @@ import { ProjectileManager } from "./ProjectileManager";
 import type { ProjectileCollisionTarget } from "./ProjectileCollision";
 
 interface WeaponKeys {
-  Q: Phaser.Input.Keyboard.Key;
-  E: Phaser.Input.Keyboard.Key;
+  SPACE: Phaser.Input.Keyboard.Key;
 }
 
 export class WeaponSystem {
   private readonly hardpoints: HardpointDefinition[];
   private readonly keys: WeaponKeys;
   private readonly projectiles: ProjectileManager;
-  private readonly pointerHandler: (pointer: Phaser.Input.Pointer) => void;
   private portCooldownUntil = 0;
   private starboardCooldownUntil = 0;
   private lastPublishedState = "";
@@ -31,27 +29,20 @@ export class WeaponSystem {
   ) {
     this.hardpoints = hardpoints;
     this.projectiles = new ProjectileManager(scene, getCollisionTargets);
-    this.keys = scene.input.keyboard!.addKeys("Q,E") as WeaponKeys;
-    this.pointerHandler = (pointer) => this.handlePointer(pointer);
+    this.keys = scene.input.keyboard!.addKeys("SPACE") as WeaponKeys;
     scene.input.mouse?.disableContextMenu();
-    scene.input.on("pointerdown", this.pointerHandler);
   }
 
-  update(time: number, deltaMs: number, options: { blockStarboardKeyboard?: boolean } = {}) {
-    if (Phaser.Input.Keyboard.JustDown(this.keys.Q)) {
-      this.fireBroadside("port", time);
-    }
-
-    if (!options.blockStarboardKeyboard && Phaser.Input.Keyboard.JustDown(this.keys.E)) {
-      this.fireBroadside("starboard", time);
-    }
-
+  update(time: number, deltaMs: number) {
     this.projectiles.update(deltaMs);
     this.publishState(time);
   }
 
+  wasFireKeyPressed() {
+    return Phaser.Input.Keyboard.JustDown(this.keys.SPACE);
+  }
+
   destroy() {
-    this.scene.input.off("pointerdown", this.pointerHandler);
     this.projectiles.destroy();
   }
 
@@ -75,14 +66,19 @@ export class WeaponSystem {
     };
   }
 
-  private handlePointer(pointer: Phaser.Input.Pointer) {
-    if (pointer.leftButtonDown()) {
-      this.fireBroadside("port", this.scene.time.now);
+  attemptFireAtTarget(targetX: number, targetY: number, time: number) {
+    const side = this.getBroadsideForTarget(targetX, targetY);
+
+    if (!side) {
+      return { fired: false, reason: "arc" as const };
     }
 
-    if (pointer.rightButtonDown()) {
-      this.fireBroadside("starboard", this.scene.time.now);
+    if (!this.isReady(side, time)) {
+      return { fired: false, reason: "cooldown" as const };
     }
+
+    this.fireBroadside(side, time);
+    return { fired: true, side };
   }
 
   private fireBroadside(side: Broadside, time: number) {
@@ -170,6 +166,21 @@ export class WeaponSystem {
 
   private playFireSoundPlaceholder(_side: Broadside) {
     // Future audio hook: route broadside firing through the sound system here.
+  }
+
+  private getBroadsideForTarget(targetX: number, targetY: number): Broadside | null {
+    const angleToTarget = Math.atan2(targetY - this.ship.y, targetX - this.ship.x);
+    const portDelta = Math.abs(Phaser.Math.Angle.Wrap(angleToTarget - getBroadsideAngle(this.ship.rotation, "port")));
+    const starboardDelta = Math.abs(
+      Phaser.Math.Angle.Wrap(angleToTarget - getBroadsideAngle(this.ship.rotation, "starboard"))
+    );
+    const arcRadians = Phaser.Math.DegToRad(WEAPON_CONFIG.broadsideArcDegrees / 2);
+
+    if (portDelta <= arcRadians || starboardDelta <= arcRadians) {
+      return portDelta <= starboardDelta ? "port" : "starboard";
+    }
+
+    return null;
   }
 
   private publishState(time: number, force = false) {

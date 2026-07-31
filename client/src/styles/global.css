@@ -615,6 +615,18 @@ h2 {
   top: 72%;
 }
 
+.map-marker.live-hostile {
+  width: 9px;
+  height: 9px;
+  background: var(--color-danger);
+  transform: translate(-50%, -50%);
+}
+
+.map-marker.live-hostile.selected {
+  background: var(--color-gold-400);
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.28);
+}
+
 .map-marker.locked {
   border: 1px solid rgba(226, 232, 240, 0.32);
   background: rgba(15, 23, 42, 0.82);
@@ -690,6 +702,33 @@ h2 {
 .navigation-readout strong {
   color: var(--color-parchment-100);
   font-size: var(--font-size-sm);
+}
+
+.target-readout {
+  display: grid;
+  gap: var(--space-2);
+}
+
+.target-readout > strong {
+  color: var(--color-gold-200);
+}
+
+.target-health {
+  height: 12px;
+  border: 2px solid var(--color-wood-900);
+  background: rgba(7, 13, 20, 0.72);
+}
+
+.target-health span {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--color-success);
+}
+
+.empty-target {
+  margin: 0;
+  color: var(--color-parchment-300);
 }
 
 .ship-gauge {

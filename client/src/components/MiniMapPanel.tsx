@@ -20,8 +20,20 @@ export function MiniMapPanel({ playerPosition }: MiniMapPanelProps) {
             transform: `translate(-50%, -50%) rotate(${playerPosition.heading}deg)`
           }}
         />
-        <span className="map-marker enemy one" />
-        <span className="map-marker enemy two" />
+        {playerPosition.hostileMarkers.map((marker) => (
+          <span
+            className={
+              marker.id === playerPosition.selectedTargetId
+                ? "map-marker live-hostile selected"
+                : "map-marker live-hostile"
+            }
+            key={marker.id}
+            style={{
+              left: `${clampPercent((marker.x / playerPosition.worldWidth) * 100)}%`,
+              top: `${clampPercent((marker.y / playerPosition.worldHeight) * 100)}%`
+            }}
+          />
+        ))}
         <span className="map-marker locked north">Locked</span>
         <span className="map-marker locked south">Locked</span>
       </div>

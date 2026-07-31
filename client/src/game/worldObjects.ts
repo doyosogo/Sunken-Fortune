@@ -33,6 +33,7 @@ export interface PortDefinition extends WorldObjectBase {
 export interface EnemyShipDefinition extends WorldObjectBase {
   objectType: "enemy";
   rotationDegrees: number;
+  patrolPoints: WorldPosition[];
 }
 
 export interface SeaMonsterDefinition extends WorldObjectBase {
@@ -135,6 +136,11 @@ export const ENEMY_SHIPS: EnemyShipDefinition[] = [
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
     projectileCollisionRadius: 48,
     rotationDegrees: 44,
+    patrolPoints: [
+      { x: 1320, y: 2040 },
+      { x: 1620, y: 1880 },
+      { x: 1480, y: 2320 }
+    ],
     objectType: "enemy"
   },
   {
@@ -144,6 +150,11 @@ export const ENEMY_SHIPS: EnemyShipDefinition[] = [
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
     projectileCollisionRadius: 48,
     rotationDegrees: 118,
+    patrolPoints: [
+      { x: 2380, y: 1180 },
+      { x: 2740, y: 960 },
+      { x: 2580, y: 1460 }
+    ],
     objectType: "enemy"
   },
   {
@@ -153,6 +164,12 @@ export const ENEMY_SHIPS: EnemyShipDefinition[] = [
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
     projectileCollisionRadius: 54,
     rotationDegrees: 214,
+    patrolPoints: [
+      { x: 3920, y: 1460 },
+      { x: 4200, y: 1280 },
+      { x: 4320, y: 1700 },
+      { x: 4020, y: 1880 }
+    ],
     objectType: "enemy"
   },
   {
@@ -162,6 +179,11 @@ export const ENEMY_SHIPS: EnemyShipDefinition[] = [
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
     projectileCollisionRadius: 48,
     rotationDegrees: 306,
+    patrolPoints: [
+      { x: 4480, y: 2480 },
+      { x: 4760, y: 2260 },
+      { x: 4860, y: 2720 }
+    ],
     objectType: "enemy"
   }
 ];

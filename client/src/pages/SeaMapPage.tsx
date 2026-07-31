@@ -7,6 +7,7 @@ import { ObjectivesPanel } from "../components/ObjectivesPanel";
 import { ResourceBar } from "../components/ResourceBar";
 import { SaveStatusBar } from "../components/SaveStatusBar";
 import { ShipStatusPanel } from "../components/ShipStatusPanel";
+import { TargetPanel } from "../components/TargetPanel";
 import { VoyageLog } from "../components/VoyageLog";
 import { createSeaMapGame } from "../game/createSeaMapGame";
 import {
@@ -30,7 +31,10 @@ export function SeaMapPage() {
     worldHeight: SEA_WORLD.height,
     regionName: SEA_WORLD.regionName,
     waterType: "Open Sea",
-    nearbyLocationName: null
+    nearbyLocationName: null,
+    selectedTargetId: null,
+    targetSnapshot: null,
+    hostileMarkers: []
   });
   const [weaponState, setWeaponState] = useState<WeaponStateUpdate>({
     portReady: true,
@@ -108,6 +112,7 @@ export function SeaMapPage() {
 
         <aside className="hud-column">
           <MiniMapPanel playerPosition={playerPosition} />
+          <TargetPanel target={playerPosition.targetSnapshot} />
           <ShipStatusPanel />
         </aside>
       </div>
