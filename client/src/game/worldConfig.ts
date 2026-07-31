@@ -53,7 +53,15 @@ export const WEAPON_CONFIG = {
   // Visual recoil distance opposite the firing side.
   recoilDistance: 8,
   // Recoil animation duration.
-  recoilDurationMs: 90
+  recoilDurationMs: 90,
+  // Radius used for placeholder cannonball overlap tests.
+  cannonballCollisionRadius: 7,
+  // Short impact flash duration for non-damaging collision validation.
+  impactFlashDurationMs: 140,
+  // Short smoke puff duration after object impacts.
+  smokePuffDurationMs: 360,
+  // Short splash duration when cannonballs expire over water.
+  waterSplashDurationMs: 300
 } as const;
 
 export type WaterType = "Open Sea" | "Shallow Waters";
@@ -76,6 +84,10 @@ export interface WeaponStateUpdate {
   portCooldownRemainingMs: number;
   starboardCooldownRemainingMs: number;
   activeCannonballs: number;
+  totalShotsFired: number;
+  successfulHits: number;
+  waterImpacts: number;
+  objectImpacts: number;
 }
 
 export const SEA_MAP_PLAYER_EVENT = "sunken-fortune:sea-map-player-update";

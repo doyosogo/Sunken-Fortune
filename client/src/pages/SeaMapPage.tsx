@@ -37,7 +37,11 @@ export function SeaMapPage() {
     starboardReady: true,
     portCooldownRemainingMs: 0,
     starboardCooldownRemainingMs: 0,
-    activeCannonballs: 0
+    activeCannonballs: 0,
+    totalShotsFired: 0,
+    successfulHits: 0,
+    waterImpacts: 0,
+    objectImpacts: 0
   });
 
   useEffect(() => {

@@ -21,8 +21,15 @@ export class Cannonball {
     return this.ageMs < WEAPON_CONFIG.cannonballLifetimeMs;
   }
 
+  get x() {
+    return this.sprite.x;
+  }
+
+  get y() {
+    return this.sprite.y;
+  }
+
   destroy() {
     this.sprite.destroy();
   }
 }
-

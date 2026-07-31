@@ -13,6 +13,7 @@ interface WorldObjectBase {
   position: WorldPosition;
   interactionRadius: number;
   objectType: WorldObjectType;
+  projectileCollisionRadius: number;
 }
 
 export interface IslandDefinition extends WorldObjectBase {
@@ -50,6 +51,7 @@ export const ISLANDS: IslandDefinition[] = [
     position: { x: 720, y: 760 },
     renderRadius: 230,
     collisionRadius: 96,
+    projectileCollisionRadius: 124,
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
     shallowWaterRadius: 260,
     objectType: "island"
@@ -60,6 +62,7 @@ export const ISLANDS: IslandDefinition[] = [
     position: { x: 1620, y: 1380 },
     renderRadius: 250,
     collisionRadius: 106,
+    projectileCollisionRadius: 136,
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
     shallowWaterRadius: 300,
     objectType: "island"
@@ -70,6 +73,7 @@ export const ISLANDS: IslandDefinition[] = [
     position: { x: 2500, y: 520 },
     renderRadius: 235,
     collisionRadius: 98,
+    projectileCollisionRadius: 126,
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
     shallowWaterRadius: 275,
     objectType: "island"
@@ -80,6 +84,7 @@ export const ISLANDS: IslandDefinition[] = [
     position: { x: 3340, y: 2100 },
     renderRadius: 245,
     collisionRadius: 104,
+    projectileCollisionRadius: 134,
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
     shallowWaterRadius: 290,
     objectType: "island"
@@ -90,6 +95,7 @@ export const ISLANDS: IslandDefinition[] = [
     position: { x: 4480, y: 2960 },
     renderRadius: 230,
     collisionRadius: 96,
+    projectileCollisionRadius: 124,
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
     shallowWaterRadius: 265,
     objectType: "island"
@@ -102,6 +108,7 @@ export const PORTS: PortDefinition[] = [
     displayName: "Tidefall Port",
     position: { x: 520, y: 2920 },
     collisionRadius: 76,
+    projectileCollisionRadius: 98,
     interactionRadius: SHIP_MOVEMENT.portInteractionDistance,
     harbourRadius: 230,
     shallowWaterRadius: 260,
@@ -112,6 +119,7 @@ export const PORTS: PortDefinition[] = [
     displayName: "Amberwake Harbor",
     position: { x: 3040, y: 2760 },
     collisionRadius: 76,
+    projectileCollisionRadius: 98,
     interactionRadius: SHIP_MOVEMENT.portInteractionDistance,
     harbourRadius: 230,
     shallowWaterRadius: 260,
@@ -125,6 +133,7 @@ export const ENEMY_SHIPS: EnemyShipDefinition[] = [
     displayName: "Raider Cutter",
     position: { x: 1320, y: 2040 },
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
+    projectileCollisionRadius: 48,
     rotationDegrees: 44,
     objectType: "enemy"
   },
@@ -133,6 +142,7 @@ export const ENEMY_SHIPS: EnemyShipDefinition[] = [
     displayName: "Rogue Sloop",
     position: { x: 2380, y: 1180 },
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
+    projectileCollisionRadius: 48,
     rotationDegrees: 118,
     objectType: "enemy"
   },
@@ -141,6 +151,7 @@ export const ENEMY_SHIPS: EnemyShipDefinition[] = [
     displayName: "Blackwake Brig",
     position: { x: 3920, y: 1460 },
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
+    projectileCollisionRadius: 54,
     rotationDegrees: 214,
     objectType: "enemy"
   },
@@ -149,6 +160,7 @@ export const ENEMY_SHIPS: EnemyShipDefinition[] = [
     displayName: "Ashwake Raider",
     position: { x: 4480, y: 2480 },
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
+    projectileCollisionRadius: 48,
     rotationDegrees: 306,
     objectType: "enemy"
   }
@@ -160,6 +172,7 @@ export const SEA_MONSTERS: SeaMonsterDefinition[] = [
     displayName: "Reef Horror",
     position: { x: 1880, y: 620 },
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
+    projectileCollisionRadius: 58,
     objectType: "monster"
   },
   {
@@ -167,6 +180,7 @@ export const SEA_MONSTERS: SeaMonsterDefinition[] = [
     displayName: "Deepcoil",
     position: { x: 3560, y: 3180 },
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
+    projectileCollisionRadius: 58,
     objectType: "monster"
   },
   {
@@ -174,6 +188,7 @@ export const SEA_MONSTERS: SeaMonsterDefinition[] = [
     displayName: "Crownmaw",
     position: { x: 4680, y: 1040 },
     interactionRadius: SHIP_MOVEMENT.nearbyInteractionDistance,
+    projectileCollisionRadius: 58,
     objectType: "monster"
   }
 ];
@@ -184,6 +199,7 @@ export const SHALLOW_WATER_ZONES: ShallowWaterZoneDefinition[] = [
     displayName: `${island.displayName} Shallows`,
     position: island.position,
     interactionRadius: 0,
+    projectileCollisionRadius: 0,
     radius: island.shallowWaterRadius!,
     objectType: "shallow-water" as const
   })),
@@ -192,7 +208,21 @@ export const SHALLOW_WATER_ZONES: ShallowWaterZoneDefinition[] = [
     displayName: `${port.displayName} Harbour Waters`,
     position: port.position,
     interactionRadius: 0,
+    projectileCollisionRadius: 0,
     radius: port.shallowWaterRadius!,
     objectType: "shallow-water" as const
   }))
+];
+
+export type ProjectileTargetDefinition =
+  | IslandDefinition
+  | PortDefinition
+  | EnemyShipDefinition
+  | SeaMonsterDefinition;
+
+export const PROJECTILE_TARGETS: ProjectileTargetDefinition[] = [
+  ...ISLANDS,
+  ...PORTS,
+  ...ENEMY_SHIPS,
+  ...SEA_MONSTERS
 ];

@@ -6,6 +6,7 @@ import {
   ENEMY_SHIPS,
   ISLANDS,
   PORTS,
+  PROJECTILE_TARGETS,
   SEA_MONSTERS,
   SHALLOW_WATER_ZONES,
   type EnemyShipDefinition,
@@ -14,6 +15,7 @@ import {
   type SeaMonsterDefinition,
   type WorldPosition
 } from "../worldObjects";
+import type { ProjectileCollisionTarget } from "../weapons/ProjectileCollision";
 
 type NearbyObjectType = "port" | "island" | "enemy" | "monster";
 
@@ -27,6 +29,7 @@ interface NearbyObject {
 }
 
 const DEBUG_OVERLAY_ENABLED = true;
+const COLLISION_DEBUG_PANEL_ENABLED = true;
 const PLAYER_COLLISION_RADIUS = 44;
 const INTERACTION_HINTS: Record<NearbyObjectType, string> = {
   port: "Press E to Dock",
@@ -39,9 +42,11 @@ export class SeaMapScene extends Phaser.Scene {
   private player?: PlayerShipController;
   private playerLabel?: Phaser.GameObjects.Text;
   private debugText?: Phaser.GameObjects.Text;
+  private collisionDebugText?: Phaser.GameObjects.Text;
   private interactionHint?: Phaser.GameObjects.Text;
   private statusText?: Phaser.GameObjects.Text;
   private weaponSystem?: WeaponSystem;
+  private projectileTargets: ProjectileCollisionTarget[] = [];
   private nearbyObjects: NearbyObject[] = [];
   private minimapEventTimer = 0;
   private currentWaterType: WaterType = "Open Sea";
@@ -72,11 +77,12 @@ export class SeaMapScene extends Phaser.Scene {
     PORTS.forEach((port) => this.createPort(port));
     ENEMY_SHIPS.forEach((ship) => this.createNpcShip(ship));
     SEA_MONSTERS.forEach((monster) => this.createSeaMonster(monster));
+    this.projectileTargets = this.createProjectileTargets();
 
     this.player = new PlayerShipController(this, 420, 2860);
     this.playerLabel = this.addLabel(this.player.container.x, this.player.container.y - 72, "Dawn Skiff", "#fef3c7");
     this.playerLabel.setDepth(30);
-    this.weaponSystem = new WeaponSystem(this, this.player.container);
+    this.weaponSystem = new WeaponSystem(this, this.player.container, () => this.projectileTargets);
 
     this.add.rectangle(SEA_WORLD.width / 2, SEA_WORLD.height / 2, SEA_WORLD.width, SEA_WORLD.height).setStrokeStyle(6, 0xd9a441, 0.7);
 
@@ -85,6 +91,10 @@ export class SeaMapScene extends Phaser.Scene {
 
     if (DEBUG_OVERLAY_ENABLED) {
       this.createDebugOverlay();
+    }
+
+    if (COLLISION_DEBUG_PANEL_ENABLED) {
+      this.createCollisionDebugPanel();
     }
 
     this.createInteractionHint();
@@ -109,6 +119,7 @@ export class SeaMapScene extends Phaser.Scene {
     this.updatePlayerLabel();
     this.updateInteractionHint(time, nearest);
     this.updateDebugOverlay();
+    this.updateCollisionDebugPanel();
     this.updateMinimapEvent(delta);
   }
 
@@ -215,6 +226,30 @@ export class SeaMapScene extends Phaser.Scene {
     });
   }
 
+  private createProjectileTargets(): ProjectileCollisionTarget[] {
+    return PROJECTILE_TARGETS.map((target) => ({
+      id: target.id,
+      displayName: target.displayName,
+      objectType: target.objectType,
+      x: target.position.x,
+      y: target.position.y,
+      radius: target.projectileCollisionRadius,
+      flash: () => this.flashWorldObject(target.position.x, target.position.y, target.projectileCollisionRadius)
+    }));
+  }
+
+  private flashWorldObject(x: number, y: number, radius: number) {
+    const flash = this.add.circle(x, y, radius, 0xffffff, 0.42);
+    flash.setDepth(33);
+    this.tweens.add({
+      targets: flash,
+      alpha: 0,
+      scale: 1.12,
+      duration: 160,
+      onComplete: () => flash.destroy()
+    });
+  }
+
   private drawRoute(points: WorldPosition[]) {
     for (let index = 0; index < points.length - 1; index += 1) {
       const start = points[index];
@@ -313,6 +348,18 @@ export class SeaMapScene extends Phaser.Scene {
     });
     this.debugText.setScrollFactor(0);
     this.debugText.setDepth(100);
+  }
+
+  private createCollisionDebugPanel() {
+    this.collisionDebugText = this.add.text(0, 0, "", {
+      backgroundColor: "rgba(7, 13, 20, 0.82)",
+      color: "#fde68a",
+      fontFamily: "monospace",
+      fontSize: "14px",
+      padding: { x: 8, y: 6 }
+    });
+    this.collisionDebugText.setScrollFactor(0);
+    this.collisionDebugText.setDepth(100);
   }
 
   private createInteractionHint() {
@@ -440,6 +487,26 @@ export class SeaMapScene extends Phaser.Scene {
       `Starboard Ready: ${this.weaponSystem?.getState(this.time.now).starboardReady ? "Yes" : "No"}`,
       `Active Cannonballs: ${this.weaponSystem?.activeCannonballCount ?? 0}`
     ]);
+  }
+
+  private updateCollisionDebugPanel() {
+    if (!this.collisionDebugText || !this.weaponSystem) {
+      return;
+    }
+
+    const state = this.weaponSystem.getState(this.time.now);
+    this.collisionDebugText.setText([
+      "Projectile Sandbox",
+      `Total Shots Fired: ${state.totalShotsFired}`,
+      `Successful Hits: ${state.successfulHits}`,
+      `Water Impacts: ${state.waterImpacts}`,
+      `Object Impacts: ${state.objectImpacts}`,
+      `Active Projectiles: ${state.activeCannonballs}`
+    ]);
+    this.collisionDebugText.setPosition(
+      this.scale.width - this.collisionDebugText.width - 12,
+      this.scale.height - this.collisionDebugText.height - 12
+    );
   }
 
   private updateMinimapEvent(delta: number) {

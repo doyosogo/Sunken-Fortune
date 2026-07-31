@@ -7,6 +7,7 @@ import {
   type HardpointDefinition
 } from "./Hardpoint";
 import { ProjectileManager } from "./ProjectileManager";
+import type { ProjectileCollisionTarget } from "./ProjectileCollision";
 
 interface WeaponKeys {
   Q: Phaser.Input.Keyboard.Key;
@@ -25,10 +26,11 @@ export class WeaponSystem {
   constructor(
     private readonly scene: Phaser.Scene,
     private readonly ship: Phaser.GameObjects.Container,
+    getCollisionTargets: () => ProjectileCollisionTarget[],
     hardpoints = STARTER_SHIP_HARDPOINTS
   ) {
     this.hardpoints = hardpoints;
-    this.projectiles = new ProjectileManager(scene);
+    this.projectiles = new ProjectileManager(scene, getCollisionTargets);
     this.keys = scene.input.keyboard!.addKeys("Q,E") as WeaponKeys;
     this.pointerHandler = (pointer) => this.handlePointer(pointer);
     scene.input.mouse?.disableContextMenu();
@@ -58,12 +60,18 @@ export class WeaponSystem {
   }
 
   getState(time: number): WeaponStateUpdate {
+    const stats = this.projectiles.getDebugStats();
+
     return {
       portReady: time >= this.portCooldownUntil,
       starboardReady: time >= this.starboardCooldownUntil,
       portCooldownRemainingMs: Math.max(0, this.portCooldownUntil - time),
       starboardCooldownRemainingMs: Math.max(0, this.starboardCooldownUntil - time),
-      activeCannonballs: this.projectiles.activeCount
+      activeCannonballs: this.projectiles.activeCount,
+      totalShotsFired: stats.totalShotsFired,
+      successfulHits: stats.successfulHits,
+      waterImpacts: stats.waterImpacts,
+      objectImpacts: stats.objectImpacts
     };
   }
 
@@ -171,7 +179,11 @@ export class WeaponSystem {
       state.starboardReady,
       Math.ceil(state.portCooldownRemainingMs / 100),
       Math.ceil(state.starboardCooldownRemainingMs / 100),
-      state.activeCannonballs
+      state.activeCannonballs,
+      state.totalShotsFired,
+      state.successfulHits,
+      state.waterImpacts,
+      state.objectImpacts
     ].join(":");
 
     if (!force && stateKey === this.lastPublishedState) {
