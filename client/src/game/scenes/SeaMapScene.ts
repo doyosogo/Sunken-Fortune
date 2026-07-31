@@ -1,12 +1,17 @@
 import Phaser from "phaser";
 import { PlayerShipController } from "../PlayerShipController";
+import { ChaseController } from "../navigation/ChaseController";
+import { NavigationGraph } from "../navigation/NavigationGraph";
 import { PatrolController } from "../navigation/PatrolController";
+import { Pathfinder } from "../navigation/Pathfinder";
+import { PathFollower } from "../navigation/PathFollower";
 import { ShipNavigator } from "../navigation/ShipNavigator";
 import { SelectionManager, type SelectableTarget } from "../selection/SelectionManager";
 import {
   SEA_MAP_PLAYER_EVENT,
   SEA_WORLD,
   SHIP_MOVEMENT,
+  NAVIGATION_CONFIG,
   WEAPON_CONFIG,
   type SeaMapPositionUpdate,
   type WaterType
@@ -44,6 +49,7 @@ interface MovingHostile {
   objectType: "enemy" | "monster";
   container: Phaser.GameObjects.Container;
   label: Phaser.GameObjects.Text;
+  navigator?: ShipNavigator;
   radius: number;
   patrol?: PatrolController;
 }
@@ -67,8 +73,13 @@ export class SeaMapScene extends Phaser.Scene {
   private interactionHint?: Phaser.GameObjects.Text;
   private statusText?: Phaser.GameObjects.Text;
   private destinationMarker?: Phaser.GameObjects.Arc;
+  private pathDebugGraphics?: Phaser.GameObjects.Graphics;
   private weaponSystem?: WeaponSystem;
   private selectionManager?: SelectionManager;
+  private navigationGraph?: NavigationGraph;
+  private pathfinder?: Pathfinder;
+  private playerPathFollower?: PathFollower;
+  private chaseController?: ChaseController;
   private projectileTargets: ProjectileCollisionTarget[] = [];
   private nearbyObjects: NearbyObject[] = [];
   private movingHostiles: MovingHostile[] = [];
@@ -87,6 +98,8 @@ export class SeaMapScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, SEA_WORLD.width, SEA_WORLD.height);
     this.cameras.main.setZoom(SHIP_MOVEMENT.cameraZoom);
     this.physics.world.setBounds(0, 0, SEA_WORLD.width, SEA_WORLD.height);
+    this.navigationGraph = new NavigationGraph();
+    this.pathfinder = new Pathfinder(this.navigationGraph);
 
     this.createOcean();
     this.createShallowWaterZones();
@@ -108,6 +121,8 @@ export class SeaMapScene extends Phaser.Scene {
     this.playerLabel = this.addLabel(this.player.container.x, this.player.container.y - 72, "Dawn Skiff", "#fef3c7");
     this.playerLabel.setDepth(30);
     this.selectionManager = new SelectionManager(this);
+    this.playerPathFollower = new PathFollower(this.player.navigator, this.player.container);
+    this.chaseController = new ChaseController(this.player.container, this.playerPathFollower, this.pathfinder);
     this.projectileTargets = this.createProjectileTargets();
     this.weaponSystem = new WeaponSystem(this, this.player.container, () => this.projectileTargets);
 
@@ -121,6 +136,9 @@ export class SeaMapScene extends Phaser.Scene {
 
     if (COLLISION_DEBUG_PANEL_ENABLED) {
       this.createCollisionDebugPanel();
+    }
+    if (NAVIGATION_CONFIG.debugEnabled) {
+      this.createNavigationDebugGraphics();
     }
 
     this.createInteractionHint();
@@ -140,11 +158,15 @@ export class SeaMapScene extends Phaser.Scene {
     }
 
     this.updateWaterState(time);
+    this.chaseController?.update(time);
+    this.playerPathFollower?.update();
     this.player.update(delta);
     this.movingHostiles.forEach((hostile) => hostile.patrol?.update(delta));
     this.updateSeaMonsterDrift(time);
+    this.resolveHostileTerrainCollision();
     this.updateMovingLabels();
     this.updateDestinationMarker();
+    this.updateNavigationDebugGraphics();
     this.refreshProjectileTargets();
     this.weaponSystem?.update(time, delta);
     this.resolveIslandCollision();
@@ -172,11 +194,14 @@ export class SeaMapScene extends Phaser.Scene {
     if (target) {
       const isDoubleClick =
         this.lastTargetClickId === target.id && this.time.now - this.lastTargetClickAt <= DOUBLE_CLICK_MS;
+      this.chaseController?.stop();
       this.selectionManager?.select(target);
       this.lastTargetClickId = target.id;
       this.lastTargetClickAt = this.time.now;
 
       if (isDoubleClick) {
+        this.chaseController?.start(target, this.time.now);
+        this.showStatusMessage(`Chasing ${target.displayName}`, this.time.now, 1300);
         this.attemptFireAtSelectedTarget(this.time.now);
       }
 
@@ -185,8 +210,11 @@ export class SeaMapScene extends Phaser.Scene {
     }
 
     this.selectionManager?.clear();
+    this.chaseController?.stop();
     this.lastTargetClickId = null;
-    this.player?.setDestination(worldPoint);
+    if (this.player && this.pathfinder && this.playerPathFollower) {
+      this.playerPathFollower.setPath(this.pathfinder.findPath(this.player.container, worldPoint));
+    }
     this.createDestinationMarker(worldPoint);
     this.publishPlayerPosition();
   }
@@ -291,8 +319,9 @@ export class SeaMapScene extends Phaser.Scene {
       objectType: "enemy",
       container: ship,
       label,
+      navigator,
       radius: definition.projectileCollisionRadius,
-      patrol: new PatrolController(navigator, ship, definition.patrolPoints)
+      patrol: new PatrolController(navigator, ship, definition.patrolPoints, this.pathfinder!)
     });
     this.nearbyObjects.push({ id: definition.id, x, y, radius: definition.interactionRadius, label: definition.displayName, type: "enemy" });
   }
@@ -386,6 +415,37 @@ export class SeaMapScene extends Phaser.Scene {
     this.tweens.add({ targets: this.destinationMarker, scale: 1.35, alpha: 0.2, duration: 760, yoyo: true, repeat: -1 });
   }
 
+  private createNavigationDebugGraphics() {
+    this.pathDebugGraphics = this.add.graphics();
+    this.pathDebugGraphics.setDepth(29);
+  }
+
+  private updateNavigationDebugGraphics() {
+    if (!this.pathDebugGraphics || !this.navigationGraph) return;
+    this.pathDebugGraphics.clear();
+    this.pathDebugGraphics.lineStyle(2, 0x7dd3fc, 0.14);
+    this.navigationGraph.nodes.forEach((node) => {
+      this.navigationGraph!.edges.get(node.id)?.forEach((neighborId) => {
+        const neighbor = this.navigationGraph!.nodes.find((candidate) => candidate.id === neighborId);
+        if (neighbor) {
+          this.pathDebugGraphics!.lineBetween(node.x, node.y, neighbor.x, neighbor.y);
+        }
+      });
+    });
+    this.pathDebugGraphics.fillStyle(0xfacc15, 0.65);
+    this.navigationGraph.nodes.forEach((node) => this.pathDebugGraphics!.fillCircle(node.x, node.y, 8));
+    const path = this.playerPathFollower?.getPath() ?? [];
+    this.pathDebugGraphics.lineStyle(5, 0xfacc15, 0.75);
+    for (let index = 0; index < path.length - 1; index += 1) {
+      this.pathDebugGraphics.lineBetween(path[index].x, path[index].y, path[index + 1].x, path[index + 1].y);
+    }
+    const waypoint = path[0];
+    if (waypoint) {
+      this.pathDebugGraphics.fillStyle(0xffffff, 0.9);
+      this.pathDebugGraphics.fillCircle(waypoint.x, waypoint.y, 12);
+    }
+  }
+
   private updateDestinationMarker() {
     if (!this.destinationMarker || !this.player) return;
     const distance = Phaser.Math.Distance.Between(
@@ -444,6 +504,18 @@ export class SeaMapScene extends Phaser.Scene {
     });
     PORTS.forEach((port) => {
       this.player!.pushFromCircle(port.position.x, port.position.y, port.collisionRadius + PLAYER_COLLISION_RADIUS);
+    });
+  }
+
+  private resolveHostileTerrainCollision() {
+    this.movingHostiles.forEach((hostile) => {
+      if (!hostile.navigator) return;
+      ISLANDS.forEach((island) => {
+        hostile.navigator!.pushFromCircle(island.position.x, island.position.y, island.collisionRadius + hostile.radius);
+      });
+      PORTS.forEach((port) => {
+        hostile.navigator!.pushFromCircle(port.position.x, port.position.y, port.collisionRadius + hostile.radius);
+      });
     });
   }
 
@@ -577,6 +649,7 @@ export class SeaMapScene extends Phaser.Scene {
       `Speed: ${Math.round(this.player.speed)}`,
       `Heading: ${Math.round(heading)} deg`,
       `Current Target: ${this.selectionManager?.getSelectedTarget()?.displayName ?? "None"}`,
+      `Chase: ${this.chaseController?.getTargetName() ?? "None"}`,
       `Port Ready: ${weaponState?.portReady ? "Yes" : "No"}`,
       `Starboard Ready: ${weaponState?.starboardReady ? "Yes" : "No"}`,
       `Active Cannonballs: ${this.weaponSystem?.activeCannonballCount ?? 0}`
@@ -624,7 +697,10 @@ export class SeaMapScene extends Phaser.Scene {
         x: hostile.container.x,
         y: hostile.container.y,
         objectType: hostile.objectType
-      }))
+      })),
+      path: this.playerPathFollower?.getPath() ?? [],
+      destination: this.playerPathFollower?.getDestination() ?? null,
+      isChasing: this.chaseController?.isChasing() ?? false
     };
     window.dispatchEvent(new CustomEvent<SeaMapPositionUpdate>(SEA_MAP_PLAYER_EVENT, { detail }));
   }

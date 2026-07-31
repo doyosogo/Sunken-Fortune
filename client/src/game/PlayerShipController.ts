@@ -4,7 +4,7 @@ import type { WorldPosition } from "./worldObjects";
 
 export class PlayerShipController {
   readonly container: Phaser.GameObjects.Container;
-  private readonly navigator: ShipNavigator;
+  readonly navigator: ShipNavigator;
 
   constructor(private readonly scene: Phaser.Scene, x: number, y: number) {
     this.container = scene.add.container(x, y);

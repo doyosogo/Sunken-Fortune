@@ -34,7 +34,10 @@ export function SeaMapPage() {
     nearbyLocationName: null,
     selectedTargetId: null,
     targetSnapshot: null,
-    hostileMarkers: []
+    hostileMarkers: [],
+    path: [],
+    destination: null,
+    isChasing: false
   });
   const [weaponState, setWeaponState] = useState<WeaponStateUpdate>({
     portReady: true,
@@ -112,7 +115,7 @@ export function SeaMapPage() {
 
         <aside className="hud-column">
           <MiniMapPanel playerPosition={playerPosition} />
-          <TargetPanel target={playerPosition.targetSnapshot} />
+          <TargetPanel isChasing={playerPosition.isChasing} target={playerPosition.targetSnapshot} />
           <ShipStatusPanel />
         </aside>
       </div>

@@ -42,7 +42,22 @@ export const SHIP_MOVEMENT = {
   // Minimum angle alignment before full acceleration is applied.
   headingAccelerationDot: 0.35,
   // Approximate camera zoom for command-view navigation.
-  cameraZoom: 0.55
+  cameraZoom: 0.55,
+  // Distance maintained when automatically chasing a selected hostile.
+  engagementDistance: 520
+} as const;
+
+export const NAVIGATION_CONFIG = {
+  // Distance around island collision circles used when generating graph nodes.
+  obstaclePadding: 210,
+  // Additional clearance required for straight route visibility.
+  lineOfSightPadding: 72,
+  // Distance from a waypoint before the follower advances to the next one.
+  waypointArrivalRadius: 92,
+  // Milliseconds between chase path recalculations.
+  chaseRepathMs: 520,
+  // Debug drawing is intentionally one switch for later removal.
+  debugEnabled: false
 } as const;
 
 export const WEAPON_CONFIG = {
@@ -105,6 +120,9 @@ export interface SeaMapPositionUpdate {
     y: number;
     objectType: "enemy" | "monster";
   }>;
+  path: Array<{ x: number; y: number }>;
+  destination: { x: number; y: number } | null;
+  isChasing: boolean;
 }
 
 export interface WeaponStateUpdate {

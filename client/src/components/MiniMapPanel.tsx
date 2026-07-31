@@ -12,6 +12,25 @@ export function MiniMapPanel({ playerPosition }: MiniMapPanelProps) {
   return (
     <GamePanel title={playerPosition.regionName}>
       <div className="minimap" aria-label="Emerald Coast minimap placeholder">
+        {playerPosition.path.map((point, index) => (
+          <span
+            className="map-marker path-dot"
+            key={`${point.x}-${point.y}-${index}`}
+            style={{
+              left: `${clampPercent((point.x / playerPosition.worldWidth) * 100)}%`,
+              top: `${clampPercent((point.y / playerPosition.worldHeight) * 100)}%`
+            }}
+          />
+        ))}
+        {playerPosition.destination && (
+          <span
+            className="map-marker destination"
+            style={{
+              left: `${clampPercent((playerPosition.destination.x / playerPosition.worldWidth) * 100)}%`,
+              top: `${clampPercent((playerPosition.destination.y / playerPosition.worldHeight) * 100)}%`
+            }}
+          />
+        )}
         <span
           className="map-marker player"
           style={{

@@ -2,15 +2,22 @@ import { GamePanel } from "./GamePanel";
 import type { SeaMapPositionUpdate } from "../game/worldConfig";
 
 interface TargetPanelProps {
+  isChasing: boolean;
   target: SeaMapPositionUpdate["targetSnapshot"];
 }
 
-export function TargetPanel({ target }: TargetPanelProps) {
+export function TargetPanel({ isChasing, target }: TargetPanelProps) {
   return (
     <GamePanel title="Current Target">
       {target ? (
         <div className="target-readout">
           <strong>{target.displayName}</strong>
+          {isChasing && (
+            <div className="pursuit-status">
+              <span className="pursuit-icon" aria-hidden="true" />
+              Chasing {target.displayName}
+            </div>
+          )}
           <div className="target-health">
             <span />
           </div>
