@@ -37,6 +37,25 @@ export const SHIP_MOVEMENT = {
   interactionMessageCooldownMs: 1400
 } as const;
 
+export const WEAPON_CONFIG = {
+  // Cooldown per broadside in milliseconds. Tuned long enough to make readiness visible.
+  broadsideCooldownMs: 1200,
+  // Projectile travel speed in world pixels per second.
+  cannonballSpeed: 620,
+  // Projectile lifetime before auto-destroy.
+  cannonballLifetimeMs: 1450,
+  // Distance from the ship side where cannonballs start.
+  hardpointSideOffset: 32,
+  // Small forward/back spread between cannons on the same side.
+  hardpointForwardSpacing: 24,
+  // Flash lifetime for generated muzzle flare placeholders.
+  muzzleFlashLifetimeMs: 110,
+  // Visual recoil distance opposite the firing side.
+  recoilDistance: 8,
+  // Recoil animation duration.
+  recoilDurationMs: 90
+} as const;
+
 export type WaterType = "Open Sea" | "Shallow Waters";
 
 export interface SeaMapPositionUpdate {
@@ -51,4 +70,13 @@ export interface SeaMapPositionUpdate {
   nearbyLocationName: string | null;
 }
 
+export interface WeaponStateUpdate {
+  portReady: boolean;
+  starboardReady: boolean;
+  portCooldownRemainingMs: number;
+  starboardCooldownRemainingMs: number;
+  activeCannonballs: number;
+}
+
 export const SEA_MAP_PLAYER_EVENT = "sunken-fortune:sea-map-player-update";
+export const SEA_MAP_WEAPON_EVENT = "sunken-fortune:sea-map-weapon-update";

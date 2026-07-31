@@ -11,8 +11,11 @@ import { VoyageLog } from "../components/VoyageLog";
 import { createSeaMapGame } from "../game/createSeaMapGame";
 import {
   SEA_MAP_PLAYER_EVENT,
+  SEA_MAP_WEAPON_EVENT,
   SEA_WORLD,
-  type SeaMapPositionUpdate
+  WEAPON_CONFIG,
+  type SeaMapPositionUpdate,
+  type WeaponStateUpdate
 } from "../game/worldConfig";
 
 export function SeaMapPage() {
@@ -29,6 +32,13 @@ export function SeaMapPage() {
     waterType: "Open Sea",
     nearbyLocationName: null
   });
+  const [weaponState, setWeaponState] = useState<WeaponStateUpdate>({
+    portReady: true,
+    starboardReady: true,
+    portCooldownRemainingMs: 0,
+    starboardCooldownRemainingMs: 0,
+    activeCannonballs: 0
+  });
 
   useEffect(() => {
     if (!containerRef.current || gameRef.current) {
@@ -40,6 +50,18 @@ export function SeaMapPage() {
     return () => {
       gameRef.current?.destroy(true);
       gameRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleWeaponUpdate = (event: Event) => {
+      setWeaponState((event as CustomEvent<WeaponStateUpdate>).detail);
+    };
+
+    window.addEventListener(SEA_MAP_WEAPON_EVENT, handleWeaponUpdate);
+
+    return () => {
+      window.removeEventListener(SEA_MAP_WEAPON_EVENT, handleWeaponUpdate);
     };
   }, []);
 
@@ -86,7 +108,7 @@ export function SeaMapPage() {
         </aside>
       </div>
 
-      <ActionBar />
+      <ActionBar cooldownDurationMs={WEAPON_CONFIG.broadsideCooldownMs} weaponState={weaponState} />
     </section>
   );
 }

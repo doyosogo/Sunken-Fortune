@@ -731,6 +731,17 @@ h2 {
   box-shadow: inset 0 1px 0 rgba(255, 232, 168, 0.28);
 }
 
+.action-button small {
+  max-width: 100%;
+  overflow: hidden;
+  color: var(--color-parchment-300);
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.62rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .action-button:hover {
   border-color: var(--color-gold-400);
   background: linear-gradient(180deg, #3f6178, #182d40);
@@ -760,6 +771,36 @@ h2 {
   height: 20px;
   border: 2px solid var(--color-brass-500);
   background: rgba(248, 193, 74, 0.22);
+}
+
+.cooldown-pair {
+  display: grid;
+  width: min(72px, 100%);
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.cooldown-meter {
+  position: relative;
+  height: 5px;
+  overflow: hidden;
+  border: 1px solid rgba(248, 193, 74, 0.48);
+  background: rgba(7, 13, 20, 0.72);
+}
+
+.cooldown-meter::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  transform: translateX(calc(-100% + var(--cooldown-percent, 0%)));
+}
+
+.cooldown-meter.port::after {
+  background: #7dd3fc;
+}
+
+.cooldown-meter.starboard::after {
+  background: var(--color-gold-400);
 }
 
 .action-button:disabled .action-icon {

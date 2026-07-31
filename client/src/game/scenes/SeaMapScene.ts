@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { PlayerShipController } from "../PlayerShipController";
 import { SEA_MAP_PLAYER_EVENT, SEA_WORLD, SHIP_MOVEMENT, type SeaMapPositionUpdate, type WaterType } from "../worldConfig";
+import { WeaponSystem } from "../weapons/WeaponSystem";
 import {
   ENEMY_SHIPS,
   ISLANDS,
@@ -40,6 +41,7 @@ export class SeaMapScene extends Phaser.Scene {
   private debugText?: Phaser.GameObjects.Text;
   private interactionHint?: Phaser.GameObjects.Text;
   private statusText?: Phaser.GameObjects.Text;
+  private weaponSystem?: WeaponSystem;
   private nearbyObjects: NearbyObject[] = [];
   private minimapEventTimer = 0;
   private currentWaterType: WaterType = "Open Sea";
@@ -74,6 +76,7 @@ export class SeaMapScene extends Phaser.Scene {
     this.player = new PlayerShipController(this, 420, 2860);
     this.playerLabel = this.addLabel(this.player.container.x, this.player.container.y - 72, "Dawn Skiff", "#fef3c7");
     this.playerLabel.setDepth(30);
+    this.weaponSystem = new WeaponSystem(this, this.player.container);
 
     this.add.rectangle(SEA_WORLD.width / 2, SEA_WORLD.height / 2, SEA_WORLD.width, SEA_WORLD.height).setStrokeStyle(6, 0xd9a441, 0.7);
 
@@ -87,6 +90,10 @@ export class SeaMapScene extends Phaser.Scene {
     this.createInteractionHint();
     this.createStatusText();
     this.publishPlayerPosition();
+
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      this.weaponSystem?.destroy();
+    });
   }
 
   update(time: number, delta: number) {
@@ -95,10 +102,12 @@ export class SeaMapScene extends Phaser.Scene {
     }
 
     this.updateWaterState(time);
+    const nearest = this.findNearestObject();
     this.player.update(delta);
+    this.weaponSystem?.update(time, delta, { blockStarboardKeyboard: nearest?.type === "port" });
     this.resolveIslandCollision();
     this.updatePlayerLabel();
-    this.updateInteractionHint(time);
+    this.updateInteractionHint(time, nearest);
     this.updateDebugOverlay();
     this.updateMinimapEvent(delta);
   }
@@ -332,12 +341,11 @@ export class SeaMapScene extends Phaser.Scene {
     this.statusText.setVisible(false);
   }
 
-  private updateInteractionHint(time: number) {
+  private updateInteractionHint(time: number, nearest: NearbyObject | null) {
     if (!this.player || !this.interactionHint) {
       return;
     }
 
-    const nearest = this.findNearestObject();
     this.currentNearbyLocationName =
       nearest && (nearest.type === "island" || nearest.type === "port") ? nearest.label : null;
 
@@ -427,7 +435,10 @@ export class SeaMapScene extends Phaser.Scene {
       `Water: ${this.currentWaterType}`,
       `Nearby: ${this.currentNearbyLocationName ?? "None"}`,
       `Speed: ${Math.round(this.player.speed)}`,
-      `Heading: ${Math.round(heading)} deg`
+      `Heading: ${Math.round(heading)} deg`,
+      `Port Ready: ${this.weaponSystem?.getState(this.time.now).portReady ? "Yes" : "No"}`,
+      `Starboard Ready: ${this.weaponSystem?.getState(this.time.now).starboardReady ? "Yes" : "No"}`,
+      `Active Cannonballs: ${this.weaponSystem?.activeCannonballCount ?? 0}`
     ]);
   }
 
