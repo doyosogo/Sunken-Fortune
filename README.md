@@ -1,113 +1,167 @@
-# Sunken Fortune
+# ⚓ Sunken Fortune
 
-Sunken Fortune is a PvE-first pirate naval action RPG / MMORPG-lite with high-quality pixel-art direction. The long-term vision is real-time open sea exploration where monsters, enemy ships, islands, bosses, and progression systems exist on an explorable sea map.
+> **Project Status:** Development Temporarily On Hold
 
-The project is legally original. It is inspired by broad pirate MMO and naval RPG genre patterns, but it must not copy names, art, UI, lore, maps, quests, dialogue, music, or exact creative expression from existing games. Current visuals are placeholder/generated shapes only.
+Sunken Fortune is a commercial-quality pirate naval action RPG / MMORPG-lite with a high-quality pixel-art art direction. The project focuses on real-time open-world sea exploration, rewarding ship progression, active naval combat, and long-term character development.
 
-## Current Status
+The game is being developed as both a long-term indie game and a flagship software engineering portfolio project, with the goal of eventually releasing on Steam, iOS, and Android.
 
-This repository is in the UI foundation polish phase. The client now has an early game-facing pirate HUD shell with placeholder generated visuals only.
+Development is **temporarily paused** while I focus on completing other portfolio projects that better align with my current software engineering career goals. The project is **not cancelled**, and development will resume once those priorities have been completed.
 
-Implemented now:
+---
 
-- Monorepo structure.
-- React + TypeScript + Vite client scaffold.
-- Phaser 3 prepared with a placeholder real-time sea map scene.
-- Lazy-loaded Sea Map route so the Phaser bundle is split away from the initial app bundle.
-- Pirate pixel-art inspired UI foundation using CSS variables, generated shapes, and placeholder HUD panels.
-- NestJS + TypeScript server scaffold.
-- Shared TypeScript type package.
-- Documentation foundation.
+# Project Vision
 
-Not implemented yet:
+Sunken Fortune aims to recreate the feeling of classic pirate naval RPGs while establishing its own original identity.
 
-- Gameplay systems.
-- Authentication.
-- Backend business logic.
-- Database or Prisma.
-- Real assets.
-- Real payments.
+Players will freely explore a large interconnected ocean filled with:
 
-## Tech Stack
+- Enemy ships
+- Sea monsters
+- Islands
+- Ports
+- Boss encounters
+- Treasure
+- Progressive ship upgrades
+- Long-term character progression
+
+Every gameplay system is being designed with commercial-quality architecture, scalability, and maintainability in mind.
+
+All artwork, lore, mechanics, and assets are original and created specifically for this project.
+
+---
+
+# Current Progress
+
+### Completed
+
+- Documentation-first project foundation
+- Monorepo architecture
+- React + TypeScript + Vite client
+- Phaser 3 game integration
+- NestJS + TypeScript backend scaffold
+- Shared TypeScript package
+- Click-to-move naval navigation
+- Smart obstacle-aware pathfinding
+- Enemy ship patrol system
+- Target selection system
+- Auto-chase navigation
+- Projectile and weapon foundation
+- Projectile collision framework
+- Pixel-art inspired game HUD
+- Placeholder open-world sea map
+
+### Planned
+
+- Naval combat
+- Enemy AI
+- Ship progression
+- Equipment system
+- Economy and trading
+- Crafting
+- Autonomous Voyage (offline progression)
+- Boss encounters
+- Quest system
+- Cloud saves
+- Multiplayer
+- Guilds
+- PvP
+- Cross-platform release
+
+---
+
+# Tech Stack
 
 | Area | Technology |
-| --- | --- |
-| Monorepo | npm workspaces |
-| Client | React, TypeScript, Vite |
-| Game engine | Phaser 3 |
-| Server | NestJS, TypeScript |
-| Shared contracts | TypeScript |
-| Future database | PostgreSQL, Prisma |
-| Styling | Clean global CSS |
+|------|------------|
+| Monorepo | npm Workspaces |
+| Client | React + TypeScript + Vite |
+| Game Engine | Phaser 3 |
+| Server | NestJS + TypeScript |
+| Shared Types | TypeScript |
+| Future Database | PostgreSQL + Prisma |
+| Future Cache | Redis |
+| Styling | CSS |
 
-## Install
+---
+
+# Installation
 
 ```bash
 npm install
 ```
 
-## Run Client
+---
+
+# Running the Client
 
 ```bash
 npm run dev:client
 ```
 
-Default Vite URL:
+Default URL:
 
 ```text
 http://localhost:5173
 ```
 
-## Run Server
+---
+
+# Running the Server
 
 ```bash
 npm run dev:server
 ```
 
-Default NestJS URL:
+Default URL:
 
 ```text
 http://localhost:3000
 ```
 
-Health check:
+Health endpoint:
 
 ```text
 GET http://localhost:3000/health
 ```
 
-## Development Phase
+---
 
-Current phase:
-
-- Game shell and UI foundation.
-- Placeholder Sea Map visualization.
-- Client-side structure for future gameplay screens.
-
-Deferred:
-
-- Combat.
-- Real save logic.
-- Backend integration.
-- Economy logic.
-- Authentication.
-- Real assets.
-
-## Phaser Loading
-
-The Sea Map page is loaded with `React.lazy` and `Suspense`. This keeps Phaser out of the initial application bundle where possible, while still allowing the Sea Map to load as the primary game screen. The loading state uses the themed message:
+# Project Layout
 
 ```text
-Charting the waters...
+client/    React + Vite + Phaser client
+server/    NestJS backend
+shared/    Shared TypeScript models
+docs/      Game design and technical documentation
+assets/    Future original game assets
+tools/     Development scripts and utilities
 ```
 
-## Project Layout
+---
 
-```text
-client/   React, Vite, TypeScript, Phaser placeholder scene
-server/   NestJS modules and health endpoint
-shared/   Shared TypeScript types
-docs/     Product, design, economy, save, and originality documentation
-assets/   Future original or licensed assets
-tools/    Future development tools and scripts
-```
+# Current Development Status
+
+Sunken Fortune is currently **on hold** while I focus on completing other software engineering portfolio projects.
+
+The project remains public so its architecture, documentation, and development progress can be explored.
+
+Development will continue from the current foundation rather than being restarted.
+
+---
+
+# Legal Notice
+
+Sunken Fortune is an original game project.
+
+While it draws inspiration from the broader pirate naval RPG genre, it does **not** copy or reuse protected creative content from any existing game, including artwork, characters, lore, maps, dialogue, UI, quests, music, or other copyrighted material.
+
+All assets currently included are placeholders or generated for development purposes.
+
+---
+
+# License
+
+This repository is provided for portfolio and educational purposes.
+
+Unless otherwise stated, all source code and original project assets remain the intellectual property of the repository owner.
